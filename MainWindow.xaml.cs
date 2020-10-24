@@ -12,72 +12,46 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using static ContactsApp.Classes.Contacts;
 
-namespace ContactsApp
+namespace ChangeConnectionStringAtRuntime
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
-        List<Contact> contacts;
         public MainWindow()
         {
             InitializeComponent();
-            contacts = new List<Contact>();
-            ReadDatabase();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
-            //instance of new contact window
-            NewContactWindow newContactWindow = new NewContactWindow();
-            // open new contact window on button click
-            newContactWindow.ShowDialog();
-            ReadDatabase();
-        }
-
-        void ReadDatabase()
-        {
-
-            using (SQLite.SQLiteConnection conn = new SQLite.SQLiteConnection(App.databasePath))
+            var connectionString = String.Format("Data Source={0};Initial Catalog={1};Integrated Security=True", serverBox.Text,databaseName.Text);
+            try
             {
-                conn.CreateTable<Contact>();
-                contacts = conn
-                          .Table<Contact>()
-                          .ToList()
-                          .OrderBy(c => c.Name)
-                          .ToList();
+                TestConnection testConnection = new TestConnection(connectionString);
+                if (testConnection.IsConnection)
+                {
+                    MessageBox.Show("Connection Successful", "Message", MessageBoxButton.OK);
+                }
             }
-
-            if (contacts != null)
+            catch (Exception ex)
             {
-                contactsListView.ItemsSource = contacts;
+                MessageBox.Show(ex.Message);
             }
         }
 
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            TextBox searchTextBox = sender as TextBox;
-            var filteredList = contacts
-                              .Where(c => c.Name.ToLower()
-                              .Contains(searchTextBox.Text.ToLower()))
-                              .ToList();
-            contactsListView.ItemsSource = filteredList;
+            Close();
         }
 
-        private void ContactsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ServerBox_Loaded(object sender, RoutedEventArgs e)
         {
-            Contact selectedContact = (Contact)contactsListView.SelectedItem;
-
-            if (selectedContact != null)
-            {
-                //instance of contactdetailswindow
-                ContactDetailsWindow contactDetailsWindow = new ContactDetailsWindow(selectedContact);
-                contactDetailsWindow.ShowDialog();
-            }
+            serverBox.Items.Add(@".\SQLEXPRESS");
+            serverBox.Items.Add(string.Format(@"{0}\SQLEXPRESS",Environment.MachineName));
+            serverBox.SelectedIndex = 1;
         }
-
     }
 }
